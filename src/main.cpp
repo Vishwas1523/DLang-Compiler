@@ -3,6 +3,7 @@
 #include <optional>
 #include <sstream>
 #include <vector>
+#include <fstream>
 enum class tokenType {
     _return,
     int_lit,
@@ -30,7 +31,7 @@ std::vector<Token> tokenize(const std::string& str){
             if(buff == "return"){
                 tokens.push_back({.type = tokenType::_return});
                 buff.clear();
-                i--;                
+                continue;                
             } else{
                 std::cerr<<"Wrong spelling...!"<<std::endl;
                 exit(EXIT_FAILURE);
@@ -82,7 +83,21 @@ int main(int argc, const char** argv) {
         std::cerr << "Correct usage: DLang input.dl" << std::endl;
         return EXIT_FAILURE;
     }
+    std::string inputFile;
+    {   
+        std::stringstream input_stream;
+        std::fstream input(argv[1], std::ios::in);
+        input_stream << input.rdbuf();
+        inputFile = input_stream.str();
+    }
+    std::vector<Token> tokens = tokenize(inputFile);
+    {
+        std::fstream file("output.asm", std::ios::out);
+        file << token_to_asm(tokens);
+    }
 
-    std::cout << "Hello World" << std::endl;
+    system("nasm -felf64 output.asm");
+    system("ld -o output output.o");
+
     return EXIT_SUCCESS;
 }
