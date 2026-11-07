@@ -58,6 +58,24 @@ std::vector<Token> tokenize(const std::string& str){
     return tokens;
 }
 
+std::string token_to_asm(const std::vector<Token>& tokens){
+    std::stringstream temp;
+    temp << "global _start\n_start:\n";
+    for(int i = 0; i < tokens.size(); i++){
+        const Token& token = tokens.at(i);
+        if(token.type == tokenType::_return){
+            if((i + 1) < tokens.size() && tokens.at(i + 1).type == tokenType::int_lit){
+                if((i + 2) < tokens.size() && tokens.at(i + 2).type == tokenType::int_lit){
+                    temp << "   move rax, 60\n";
+                    temp << "   move rdi, " <<  tokens.at(i+1).value.value() << "\n";
+                    temp << "   syscall"; 
+                }
+            }
+        }
+    }
+    return temp.str();
+}
+
 int main(int argc, const char** argv) {
     if (argc != 2) {
         std::cerr << "Incorrect input......" << std::endl;
