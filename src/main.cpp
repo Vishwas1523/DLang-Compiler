@@ -4,25 +4,7 @@
 #include <sstream>
 #include <vector>
 #include <fstream>
-#include "tokenization.hpp"
-
-std::string token_to_asm(const std::vector<Token>& tokens){
-    std::stringstream temp;
-    temp << "global _start\n_start:\n";
-    for(int i = 0; i < tokens.size(); i++){
-        const Token& token = tokens.at(i);
-        if(token.type == tokenType::_return){
-            if((i + 1) < tokens.size() && tokens.at(i + 1).type == tokenType::int_lit){
-                if((i + 2) < tokens.size() && tokens.at(i + 2).type == tokenType::int_lit){
-                    temp << "   move rax, 60\n";
-                    temp << "   move rdi, " <<  tokens.at(i+1).value.value() << "\n";
-                    temp << "   syscall"; 
-                }
-            }
-        }
-    }
-    return temp.str();
-}
+#include "generation.hpp"
 
 int main(int argc, const char** argv) {
     if (argc != 2) {
@@ -30,21 +12,33 @@ int main(int argc, const char** argv) {
         std::cerr << "Correct usage: DLang input.dl" << std::endl;
         return EXIT_FAILURE;
     }
-    std::string inputFile;
-    {   
-        std::stringstream input_stream;
-        std::fstream input(argv[1], std::ios::in);
-        input_stream << input.rdbuf();
-        inputFile = input_stream.str();
-    }
-    std::vector<Token> tokens = tokenize(inputFile);
+     std::string contents;
     {
-        std::fstream file("output.asm", std::ios::out);
-        file << token_to_asm(tokens);
+        std::stringstream contents_stream;
+        std::fstream input(argv[1], std::ios::in);
+        contents_stream << input.rdbuf();
+        contents = contents_stream.str();
     }
 
-    system("nasm -felf64 output.asm");
-    system("ld -o output output.o");
+    Tokenizer tokenizer(std::move(contents));
+    std::vector<Token> tokens = tokenizer.tokenize();
+
+    Parser parser(std::move(tokens));
+    std::optional<NodeReturn> tree = parser.parse();
+
+    if (!tree.has_value()) {
+        std::cerr << "No exit statement found" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    Generator generator(tree.value());
+    {
+        std::fstream file("out.asm", std::ios::out);
+        file << generator.generate();
+    }
+
+    system("nasm -felf64 out.asm");
+    system("ld -o out out.o");
 
     return EXIT_SUCCESS;
 }

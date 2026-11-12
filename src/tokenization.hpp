@@ -66,7 +66,7 @@ std::vector<Token> tokenize(){
 private:
 [[nodiscard]]std::optional<char>peek(int look_ahead = 1) const{
     if(index + look_ahead > src.length()) return{};
-    else   src.at(index);
+    else   return src.at(index);
 }
 char consume(){
     return src.at(index++);
